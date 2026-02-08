@@ -59,12 +59,12 @@ const authController = {
             // Create role-specific entry
             if (userType === 'Customer') {
                 await client.query(
-                    'INSERT INTO "Customers" ("customerUserId") VALUES ($1)',
+                    'INSERT INTO "Customers" ("userId") VALUES ($1)',
                     [user.userId]
                 );
             } else if (userType === 'Advertiser') {
                 await client.query(
-                    'INSERT INTO "Advertisers" ("advertiserUserId", "advertiserBusinessName") VALUES ($1, $2)',
+                    'INSERT INTO "Advertisers" ("userId", "advertiserBusinessName") VALUES ($1, $2)',
                     [user.userId, req.body.businessName || 'Not Specified']
                 );
             }

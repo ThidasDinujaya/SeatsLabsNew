@@ -29,9 +29,25 @@ function SignUp() {
         setError('');
         setLoading(true);
 
-        // Basic Validation
+        // Basic Frontend Validation
         if (formData.password !== formData.confirmPassword) {
             setError('Passwords do not match');
+            setLoading(false);
+            return;
+        }
+
+        // Validate Password Complexity locally to give immediate feedback
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+        if (!passwordRegex.test(formData.password)) {
+            setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.');
+            setLoading(false);
+            return;
+        }
+
+        // Validate Phone Number locally
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(formData.phone)) {
+            setError('Phone number must be exactly 10 digits.');
             setLoading(false);
             return;
         }
@@ -42,17 +58,29 @@ function SignUp() {
                 lastName: formData.lastName,
                 email: formData.email,
                 phoneNumber: formData.phone,
-                dob: formData.dob,
                 password: formData.password,
-                userType: 'Customer' // Default to customer
+                userType: 'Customer'
             };
+
+            // Only add dob if it has a value to avoid sending empty string which might fail date validation
+            if (formData.dob) {
+                signupData.dob = formData.dob;
+            }
 
             await api.auth.register(signupData);
             alert('Account created successfully! Please login.');
             navigate('/login');
         } catch (err) {
-            console.error(err);
-            setError(err.response?.data?.error || 'Registration failed. Please try again.');
+            console.error('Registration Error:', err);
+            
+            // Handle backend validation errors (array) or single error message
+            if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+                // Combine all error messages
+                const messages = err.response.data.errors.map(e => e.msg).join('. ');
+                setError(messages);
+            } else {
+                setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
