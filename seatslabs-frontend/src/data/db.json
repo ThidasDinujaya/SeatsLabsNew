@@ -1,0 +1,370 @@
+{
+    "users": [
+        {
+            "user_id": 1,
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john@example.com",
+            "phone": "0771234567",
+            "password_hash": "hash_123",
+            "dob": "1990-01-01",
+            "user_type_id": 2,
+            "created_at": "2025-12-01T10:00:00",
+            "updated_at": "2025-12-01T10:00:00"
+        },
+        {
+            "user_id": 2,
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "email": "jane@example.com",
+            "phone": "0777654321",
+            "password_hash": "hash_456",
+            "dob": "1992-05-15",
+            "user_type_id": 3,
+            "created_at": "2025-12-02T11:00:00",
+            "updated_at": "2025-12-02T11:00:00"
+        },
+        {
+            "user_id": 3,
+            "first_name": "Mike",
+            "last_name": "Lee",
+            "email": "mike@example.com",
+            "phone": "0711112222",
+            "password_hash": "hash_789",
+            "dob": "1985-08-20",
+            "user_type_id": 1,
+            "created_at": "2025-12-03T09:00:00",
+            "updated_at": "2025-12-03T09:00:00"
+        },
+        {
+            "user_id": 4,
+            "first_name": "AutoParts",
+            "last_name": "Ltd",
+            "email": "ads@autoparts.com",
+            "phone": "0112233445",
+            "password_hash": "hash_101",
+            "dob": "1980-01-01",
+            "user_type_id": 4,
+            "created_at": "2025-12-04T14:00:00",
+            "updated_at": "2025-12-04T14:00:00"
+        }
+    ],
+    "user_types": [
+        {
+            "user_type_id": 1,
+            "name": "Manager",
+            "description": "System Administrator"
+        },
+        {
+            "user_type_id": 2,
+            "name": "Customer",
+            "description": "Service Seeker"
+        },
+        {
+            "user_type_id": 3,
+            "name": "Technician",
+            "description": "Service Provider"
+        },
+        {
+            "user_type_id": 4,
+            "name": "Advertiser",
+            "description": "Ad Campaign Manager"
+        }
+    ],
+    "technician_details": [
+        {
+            "technician_id": 1,
+            "user_id": 2,
+            "specialization": "Engine Repair",
+            "skill_level": "Senior",
+            "is_available": true,
+            "performance_rating": 4.8
+        }
+    ],
+    "customer_details": [
+        {
+            "customer_id": 1,
+            "user_id": 1,
+            "preferred_contact_method": "Email",
+            "loyalty_points": 150
+        }
+    ],
+    "advertiser_details": [
+        {
+            "advertiser_id": 1,
+            "user_id": 4,
+            "business_name": "AutoParts Ltd",
+            "business_type": "Retail",
+            "tax_id": "TAX-999888",
+            "contact_person": "Sales Manager"
+        }
+    ],
+    "manager_details": [
+        {
+            "manager_id": 1,
+            "user_id": 3,
+            "department": "Operations",
+            "join_date": "2020-01-01"
+        }
+    ],
+    "vehicle_brands": [
+        {
+            "brand_id": 1,
+            "name": "Honda",
+            "country": "Japan"
+        },
+        {
+            "brand_id": 2,
+            "name": "Toyota",
+            "country": "Japan"
+        },
+        {
+            "brand_id": 3,
+            "name": "BMW",
+            "country": "Germany"
+        }
+    ],
+    "vehicle_models": [
+        {
+            "model_id": 1,
+            "brand_id": 1,
+            "name": "Civic",
+            "year_introduced": 2020
+        },
+        {
+            "model_id": 2,
+            "brand_id": 2,
+            "name": "Corolla",
+            "year_introduced": 2019
+        },
+        {
+            "model_id": 3,
+            "brand_id": 3,
+            "name": "3 Series",
+            "year_introduced": 2021
+        }
+    ],
+    "vehicle_body_types": [
+        {
+            "body_type_id": 1,
+            "name": "Sedan",
+            "description": "4-door passenger car"
+        },
+        {
+            "body_type_id": 2,
+            "name": "SUV",
+            "description": "Sport Utility Vehicle"
+        }
+    ],
+    "vehicles": [
+        {
+            "vehicle_id": 101,
+            "customer_id": 1,
+            "brand_id": 1,
+            "model_id": 1,
+            "body_type_id": 1,
+            "registration_number": "ABC1234",
+            "manufacture_year": 2022,
+            "color": "Red",
+            "mileage": 15000,
+            "created_at": "2025-12-05T10:00:00"
+        }
+    ],
+    "service_categories": [
+        {
+            "category_id": 1,
+            "name": "Maintenance",
+            "description": "Regular checkups",
+            "is_available": true
+        },
+        {
+            "category_id": 2,
+            "name": "Repair",
+            "description": "Fixing issues",
+            "is_available": true
+        }
+    ],
+    "services": [
+        {
+            "service_id": 1,
+            "category_id": 1,
+            "name": "Oil Change",
+            "description": "Full synthetic oil change",
+            "duration_minutes": 60,
+            "base_price": 5000.00,
+            "estimated_min_minutes": 45,
+            "estimated_max_minutes": 75,
+            "is_available": true
+        },
+        {
+            "service_id": 2,
+            "category_id": 2,
+            "name": "Brake Replacement",
+            "description": "Front and rear brake pads",
+            "duration_minutes": 120,
+            "base_price": 15000.00,
+            "estimated_min_minutes": 90,
+            "estimated_max_minutes": 150,
+            "is_available": true
+        }
+    ],
+    "time_slots": [
+        {
+            "time_slot_id": 1,
+            "slot_date": "2026-01-20",
+            "start_time": "09:00:00",
+            "end_time": "10:00:00",
+            "is_available": true,
+            "max_capacity": 3,
+            "current_bookings": 1
+        },
+        {
+            "time_slot_id": 2,
+            "slot_date": "2026-01-20",
+            "start_time": "10:00:00",
+            "end_time": "11:00:00",
+            "is_available": true,
+            "max_capacity": 3,
+            "current_bookings": 0
+        }
+    ],
+    "bookings": [
+        {
+            "booking_id": 201,
+            "customer_id": 1,
+            "vehicle_id": 101,
+            "service_id": 1,
+            "time_slot_id": 1,
+            "technician_id": null,
+            "booking_reference": "REF-201",
+            "scheduled_datetime": "2026-01-20T09:00:00",
+            "booking_status": "Pending",
+            "estimated_price": 5000.00,
+            "special_notes": "Please check tire pressure too",
+            "created_at": "2026-01-15T09:00:00"
+        }
+    ],
+    "booking_status_history": [
+        {
+            "history_id": 1,
+            "booking_id": 201,
+            "status": "Pending",
+            "status_datetime": "2026-01-15T09:00:00",
+            "updated_by_user_id": 1
+        }
+    ],
+    "ad_pricing_plans": [
+        {
+            "pricing_plan_id": 1,
+            "plan_name": "Basic",
+            "plan_type": "CPM",
+            "price_per_day": 500.00,
+            "max_impressions": 1000,
+            "features": "Sidebar ads only"
+        },
+        {
+            "pricing_plan_id": 2,
+            "plan_name": "Premium",
+            "plan_type": "Hybrid",
+            "price_per_day": 1500.00,
+            "max_impressions": 5000,
+            "features": "Sidebar + Banner ads"
+        }
+    ],
+    "ad_campaigns": [
+        {
+            "campaign_id": 801,
+            "advertiser_id": 1,
+            "pricing_plan_id": 1,
+            "campaign_name": "Winter Sale",
+            "start_date": "2026-01-01",
+            "end_date": "2026-01-31",
+            "status": "Active",
+            "budget": 50000.00,
+            "target_audience": "SUV Owners"
+        }
+    ],
+    "advertisements": [
+        {
+            "advertisement_id": 901,
+            "campaign_id": 801,
+            "ad_title": "10% Off Winter Tires",
+            "ad_content": "Get safe this winter with our premium tires.",
+            "target_service_types": [
+                1,
+                2
+            ],
+            "display_priority": 1,
+            "is_approved": true
+        }
+    ],
+    "ad_analytics_daily": [
+        {
+            "analytics_id": 1,
+            "advertisement_id": 901,
+            "date": "2026-01-18",
+            "impressions": 150,
+            "clicks": 12,
+            "conversions": 1,
+            "cost": 450.00
+        }
+    ],
+    "system_analytics_daily": [
+        {
+            "analytics_id": 1,
+            "date": "2026-01-18",
+            "total_bookings": 5,
+            "completed_bookings": 2,
+            "cancelled_bookings": 0,
+            "total_revenue": 25000.00,
+            "customer_satisfaction": 4.5
+        }
+    ],
+    "feedbacks": [
+        {
+            "feedback_id": 1,
+            "booking_id": 201,
+            "customer_id": 1,
+            "technician_id": 1,
+            "service_rating": 5,
+            "technician_rating": 5,
+            "comments": "Great service!",
+            "submitted_at": "2026-01-21T10:00:00"
+        }
+    ],
+    "complaints": [],
+    "notifications": [
+        {
+            "notification_id": 1,
+            "user_id": 1,
+            "type": "Reminder",
+            "title": "Booking Reminder",
+            "message": "You have a booking tomorrow at 9 AM.",
+            "is_read": false,
+            "scheduled_time": "2026-01-19T09:00:00",
+            "sent_time": "2026-01-19T09:00:00"
+        }
+    ],
+    "notification_templates": [
+        {
+            "template_id": 1,
+            "name": "Booking Reminder",
+            "type": "Email",
+            "subject": "Upcoming Appointment",
+            "body": "Dear {name}, reminder for your appointment on {date}."
+        }
+    ],
+    "payments": [],
+    "payment_methods": [
+        {
+            "method_id": 1,
+            "name": "Credit Card",
+            "is_active": true
+        },
+        {
+            "method_id": 2,
+            "name": "Cash",
+            "is_active": true
+        }
+    ]
+}
