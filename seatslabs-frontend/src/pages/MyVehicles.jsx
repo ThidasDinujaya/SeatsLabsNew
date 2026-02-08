@@ -28,19 +28,16 @@ function MyVehicles() {
             setLoading(true);
             console.log('Fetching vehicle data...');
             
-            // Fetch public data (brands, models, body types) - these don't require auth
-            const [brandsRes, modelsRes, bodyTypesRes] = await Promise.all([
+            // Fetch public data (brands, body types) - models will be fetched on brand selection
+            const [brandsRes, bodyTypesRes] = await Promise.all([
                 api.vehicles.getBrands(),
-                api.vehicles.getAllModels(),
                 api.vehicles.getBodyTypes()
             ]);
 
             console.log('Brands:', brandsRes.data.data);
-            console.log('Models:', modelsRes.data.data);
             console.log('Body Types:', bodyTypesRes.data.data);
 
             setBrands(brandsRes.data.data);
-            setModels(modelsRes.data.data);
             setBodyTypes(bodyTypesRes.data.data);
 
             // Fetch user's vehicles separately (requires auth)
@@ -70,12 +67,23 @@ function MyVehicles() {
         }
     }, [navigate]);
 
-    const handleInputChange = (e) => {
+    const handleInputChange = async (e) => {
         const { name, value } = e.target;
         setNewVehicle(prev => ({
             ...prev,
             [name]: value
         }));
+
+        // Fetch models when brand changes
+        if (name === 'brandId' && value) {
+            try {
+                const response = await api.vehicles.getModelsByBrand(value);
+                setModels(response.data.data);
+            } catch (error) {
+                console.error("Failed to fetch models for brand:", error);
+                setModels([]);
+            }
+        }
     };
 
     const handleAddVehicle = async (e) => {

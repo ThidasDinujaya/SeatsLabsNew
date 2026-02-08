@@ -10,23 +10,25 @@ const analyticsController = {
             const todayStats = await pool.query(`
         SELECT 
           COUNT(*) as total_Bookings,
-          COUNT(CASE WHEN "bookingStatus" = 'Completed' THEN 1 END) as completed,
-          COUNT(CASE WHEN bookingStatus = 'Pending' THEN 1 END) as pending,
-          COUNT(CASE WHEN bookingStatus = 'In Progress' THEN 1 END) as in_progress,
-          COALESCE(SUM(CASE WHEN bookingStatus = 'Completed' THEN "bookingEstimatedPrice" ELSE 0 END), 0) as revenue
-        FROM "Bookings"
-        WHERE DATE("bookingScheduledDateTime") = $1
+          COUNT(CASE WHEN bs."bookingStatusName" = 'Completed' THEN 1 END) as completed,
+          COUNT(CASE WHEN bs."bookingStatusName" = 'Pending' THEN 1 END) as pending,
+          COUNT(CASE WHEN bs."bookingStatusName" = 'In Progress' THEN 1 END) as in_progress,
+          COALESCE(SUM(CASE WHEN bs."bookingStatusName" = 'Completed' THEN "bookingEstimatedPrice" ELSE 0 END), 0) as revenue
+        FROM "Bookings" b
+        JOIN "BookingStatuses" bs ON b."bookingStatusId" = bs."bookingStatusId"
+        WHERE DATE(b."bookingScheduledDateTime") = $1
       `, [today]);
 
             // This month's statistics
             const monthStats = await pool.query(`
         SELECT 
           COUNT(*) as total_Bookings,
-          COUNT(CASE WHEN "bookingStatus" = 'Completed' THEN 1 END) as completed,
-          COALESCE(SUM(CASE WHEN "bookingStatus" = 'Completed' THEN "bookingEstimatedPrice" ELSE 0 END), 0) as service_revenue
-        FROM "Bookings"
-        WHERE EXTRACT(MONTH FROM "bookingScheduledDateTime") = EXTRACT(MONTH FROM CURRENT_DATE)
-          AND EXTRACT(YEAR FROM "bookingScheduledDateTime") = EXTRACT(YEAR FROM CURRENT_DATE)
+          COUNT(CASE WHEN bs."bookingStatusName" = 'Completed' THEN 1 END) as completed,
+          COALESCE(SUM(CASE WHEN bs."bookingStatusName" = 'Completed' THEN "bookingEstimatedPrice" ELSE 0 END), 0) as service_revenue
+        FROM "Bookings" b
+        JOIN "BookingStatuses" bs ON b."bookingStatusId" = bs."bookingStatusId"
+        WHERE EXTRACT(MONTH FROM b."bookingScheduledDateTime") = EXTRACT(MONTH FROM CURRENT_DATE)
+          AND EXTRACT(YEAR FROM b."bookingScheduledDateTime") = EXTRACT(YEAR FROM CURRENT_DATE)
       `);
 
             // Ad revenue this month
@@ -47,9 +49,9 @@ const analyticsController = {
 
             // Customer satisfaction
             const satisfaction = await pool.query(`
-        SELECT AVG("feedbackServiceRating") as avg_rating
+        SELECT AVG("feedbackRating") as avg_rating
         FROM "Feedbacks"
-        WHERE EXTRACT(MONTH FROM "feedbackSubmittedAt") = EXTRACT(MONTH FROM CURRENT_DATE)
+        WHERE EXTRACT(MONTH FROM "feedbackCreatedAt") = EXTRACT(MONTH FROM CURRENT_DATE)
       `);
 
             res.json({
@@ -88,13 +90,14 @@ const analyticsController = {
         try {
             const result = await pool.query(`
         SELECT 
-          DATE("bookingScheduledDateTime") as date,
+          DATE(b."bookingScheduledDateTime") as date,
           COUNT(*) as total_Bookings,
-          COUNT(CASE WHEN "bookingStatus" = 'Completed' THEN 1 END) as completed,
-          COUNT(CASE WHEN "bookingStatus" = 'Cancelled' THEN 1 END) as cancelled
-        FROM "Bookings"
-        WHERE "bookingScheduledDateTime" >= CURRENT_DATE - INTERVAL '30 days'
-        GROUP BY DATE("bookingScheduledDateTime")
+          COUNT(CASE WHEN bs."bookingStatusName" = 'Completed' THEN 1 END) as completed,
+          COUNT(CASE WHEN bs."bookingStatusName" = 'Cancelled' THEN 1 END) as cancelled
+        FROM "Bookings" b
+        JOIN "BookingStatuses" bs ON b."bookingStatusId" = bs."bookingStatusId"
+        WHERE b."bookingScheduledDateTime" >= CURRENT_DATE - INTERVAL '30 days'
+        GROUP BY DATE(b."bookingScheduledDateTime")
         ORDER BY date
       `);
 
@@ -114,12 +117,13 @@ const analyticsController = {
         SELECT 
           s."serviceName",
           COUNT(b."bookingId") as booking_count,
-          AVG(f."feedbackServiceRating") as avg_rating,
+          AVG(f."feedbackRating") as avg_rating,
           SUM(b."bookingEstimatedPrice") as total_revenue
         FROM "Services" s
         LEFT JOIN "Bookings" b ON s."serviceId" = b."serviceId"
+        LEFT JOIN "BookingStatuses" bs ON b."bookingStatusId" = bs."bookingStatusId"
         LEFT JOIN "Feedbacks" f ON b."bookingId" = f."bookingId"
-        WHERE b."bookingStatus" = 'Completed'
+        WHERE bs."bookingStatusName" = 'Completed' OR b."bookingId" IS NULL
         GROUP BY s."serviceId", s."serviceName"
         ORDER BY booking_count DESC
       `);

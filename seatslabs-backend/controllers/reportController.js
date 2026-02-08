@@ -64,7 +64,7 @@ const reportController = {
                     b."bookingReference", ts."timeSlotStartTime",
                     CONCAT(cu."userFirstName", ' ', cu."userLastName") as customer,
                     CONCAT(vb."vehicleBrandName", ' ', vm."vehicleModelName") as vehicle,
-                    s."serviceName", b."bookingStatus", b."bookingEstimatedPrice"
+                    s."serviceName", bs."bookingStatusName" as "bookingStatus", b."bookingEstimatedPrice"
                 FROM "Bookings" b
                 JOIN "Services" s ON b."serviceId" = s."serviceId"
                 JOIN "Vehicles" v ON b."vehicleId" = v."vehicleId"
@@ -73,6 +73,7 @@ const reportController = {
                 JOIN "Customers" c ON b."customerId" = c."customerId"
                 JOIN "Users" cu ON c."userId" = cu."userId"
                 JOIN "TimeSlots" ts ON b."timeSlotId" = ts."timeSlotId"
+                JOIN "BookingStatuses" bs ON b."bookingStatusId" = bs."bookingStatusId"
                 WHERE DATE(b."bookingScheduledDateTime") = $1
                 ORDER BY ts."timeSlotStartTime" ASC`;
 
@@ -126,10 +127,11 @@ const reportController = {
                     DATE("bookingScheduledDateTime") as date,
                     SUM("bookingEstimatedPrice") as service_rev,
                     COUNT(*) as "Bookings"
-                FROM "Bookings" 
+                FROM "Bookings" b
+                JOIN "BookingStatuses" bs ON b."bookingStatusId" = bs."bookingStatusId"
                 WHERE EXTRACT(MONTH FROM "bookingScheduledDateTime") = $1 
                 AND EXTRACT(YEAR FROM "bookingScheduledDateTime") = $2
-                AND "bookingStatus" = 'Completed'
+                AND bs."bookingStatusName" = 'Completed'
                 GROUP BY DATE("bookingScheduledDateTime")
                 ORDER BY date`;
 
@@ -182,7 +184,7 @@ const reportController = {
                     CONCAT(u."userFirstName", ' ', u."userLastName") as name,
                     t."technicianSpecialization",
                     COUNT(b."bookingId") as jobs,
-                    AVG(f."feedbackTechnicianRating") as rating
+                    AVG(f."feedbackRating") as rating
                 FROM "Technicians" t
                 JOIN "Users" u ON t."userId" = u."userId"
                 LEFT JOIN "Bookings" b ON t."technicianId" = b."technicianId"
@@ -236,13 +238,13 @@ const reportController = {
                 SELECT 
                     s."serviceName",
                     COUNT(f."feedbackId") as count,
-                    AVG(f."feedbackServiceRating") as rating,
-                    string_agg(f."feedbackComments", ' | ') as feedback
+                    AVG(f."feedbackRating") as rating,
+                    string_agg(f."feedbackComment", ' | ') as feedback
                 FROM "Feedbacks" f
-                JOIN "Bookings" b ON f."feedbackBookingId" = b."bookingId"
-                JOIN "Services" s ON b."bookingServiceId" = s."serviceId"
-                WHERE EXTRACT(MONTH FROM f."feedbackSubmittedAt") = $1
-                AND EXTRACT(YEAR FROM f."feedbackSubmittedAt") = $2
+                JOIN "Bookings" b ON f."bookingId" = b."bookingId"
+                JOIN "Services" s ON b."serviceId" = s."serviceId"
+                WHERE EXTRACT(MONTH FROM f."feedbackCreatedAt") = $1
+                AND EXTRACT(YEAR FROM f."feedbackCreatedAt") = $2
                 GROUP BY s."serviceName"`;
 
             const data = await pool.query(query, [m, y_req]);

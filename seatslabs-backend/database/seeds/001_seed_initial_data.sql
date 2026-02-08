@@ -105,9 +105,16 @@ INSERT INTO "ServiceCategories" ("serviceCategoryName", "serviceCategoryDescript
 
 -- Insert Services
 INSERT INTO "Services" ("serviceCategoryId", "serviceName", "serviceDescription", "serviceDurationMinutes", "serviceBasePrice") VALUES
-(1, 'Oil Change', 'Engine oil and filter replacement', 30, 2500.00),
-(1, 'Full Service', 'Complete vehicle servicing', 120, 8000.00),
-(2, 'Brake Repair', 'Brake system repair and replacement', 60, 5000.00);
+(1, 'Oil Change', 'Engine oil and filter replacement with multi-point inspection', 30, 2500.00),
+(1, 'Full Service', 'Complete vehicle servicing including engine tuning, fluid checks, and brake inspection', 120, 8000.00),
+(1, 'Wheel Alignment', 'Precise laser wheel alignment for better handling and tire life', 45, 1500.00),
+(1, 'Tire Rotation', 'Rotating tires to ensure even wear and longevity', 20, 800.00),
+(1, 'AC Service', 'Air conditioning system check and gas refilling', 60, 4500.00),
+(1, 'Engine Wash', 'Steam cleaning of engine bay for better cooling and visual inspection', 30, 1200.00),
+(2, 'Brake Repair', 'Brake pad and disc replacement with system bleeding', 60, 5000.00),
+(2, 'Battery Replacement', 'Testing and replacement of vehicle battery with warranty', 15, 7500.00),
+(2, 'Suspension Repair', 'Shock absorber and bushing replacement for a smoother ride', 180, 15000.00),
+(2, 'Clutch Repair', 'Full clutch system overhaul and adjustment', 240, 25000.00);
 
 -- Insert Advertisement Pricing Plans
 INSERT INTO "AdPricingPlans" ("adPricingPlanName", "adPricingPlanType", "adPricingPlanPricePerDay", "adPricingPlanMaxImpressions", "adPricingPlanFeatures") VALUES

@@ -21,6 +21,7 @@ function Booking({ services }) {
     notes: ''
   });
 
+  const [localServices, setLocalServices] = useState(services || []);
   const [currentUser, setCurrentUser] = useState(null);
   const [userVehicles, setUserVehicles] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
@@ -28,6 +29,35 @@ function Booking({ services }) {
   const [errors, setErrors] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
+
+  // Sync services prop to local state
+  useEffect(() => {
+    if (services && services.length > 0) {
+      setLocalServices(services);
+    }
+  }, [services]);
+
+  // Fetch services if localServices is still empty
+  useEffect(() => {
+    if (localServices.length === 0) {
+      const fetchServices = async () => {
+        try {
+          const response = await api.services.getAll();
+          const mapped = response.data.data.map(s => ({
+            id: s.serviceId,
+            name: s.serviceName,
+            description: s.serviceDescription,
+            price: parseFloat(s.serviceBasePrice),
+            duration: `${s.serviceDurationMinutes} mins`
+          }));
+          setLocalServices(mapped);
+        } catch (error) {
+          console.error("Failed to fetch services locally:", error);
+        }
+      };
+      fetchServices();
+    }
+  }, []);
 
   // Prefill from Logged In User and Load Data
   useEffect(() => {
@@ -58,7 +88,7 @@ function Booking({ services }) {
       };
       fetchVehicles();
     }
-  }, []);
+  }, [navigate]);
 
   // Update Available Slots when Date Changes
   useEffect(() => {
@@ -133,7 +163,7 @@ function Booking({ services }) {
   // Success message component
   if (isSubmitted) {
     const selectedTime = availableSlots.find(s => s.timeSlotId.toString() === formData.timeSlotId.toString())?.timeSlotStartTime || 'Selected Time';
-    const selectedServiceName = services.find(s => s.id.toString() === formData.serviceId.toString())?.name || 'Selected Service';
+    const selectedServiceName = localServices.find(s => s.id.toString() === formData.serviceId.toString())?.name || 'Selected Service';
 
     return (
       <div className="booking-page">
@@ -214,7 +244,7 @@ function Booking({ services }) {
             <label htmlFor="serviceId">Service Type *</label>
             <select id="serviceId" name="serviceId" value={formData.serviceId} onChange={handleChange} className={errors.serviceId ? 'error' : ''}>
               <option value="">-- Select a Service --</option>
-              {services.map(service => (
+              {localServices.map(service => (
                 <option key={service.id} value={service.id}>
                   {service.name} - Rs. {service.price.toLocaleString()}
                 </option>

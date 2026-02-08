@@ -5,7 +5,10 @@ const advertisementController = {
         try {
             const { pricingPlanId, campaignName, campaignType, startDate, endDate, adCampaignBudget, targetAudience } = req.body;
             const result = await pool.query(
-                'INSERT INTO "AdCampaigns" ("advertiserId", "adPricingPlanId", "adCampaignName", "adCampaignType", "adCampaignStartDate", "adCampaignEndDate", "adCampaignBudget", "adCampaignTargetAudience") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+                `INSERT INTO "AdCampaigns" 
+                ("advertiserId", "adPricingPlanId", "adCampaignStatusId", "adCampaignName", "adCampaignType", "adCampaignStartDate", "adCampaignEndDate", "adCampaignBudget", "adCampaignTargetAudience") 
+                VALUES ($1, $2, (SELECT "adCampaignStatusId" FROM "AdCampaignStatuses" WHERE "adCampaignStatusName" = 'Pending Approval'), $3, $4, $5, $6, $7, $8) 
+                RETURNING *`,
                 [req.user.advertiserId, pricingPlanId, campaignName, campaignType, startDate, endDate, adCampaignBudget, targetAudience]
             );
             res.status(201).json({ success: true, data: result.rows[0] });
@@ -29,8 +32,8 @@ const advertisementController = {
             const { adTitle, adContent, mediaType, targetServiceType } = req.body;
             const mediaUrl = req.file ? req.file.path : null;
             const result = await pool.query(
-                'INSERT INTO "Advertisements" ("advertisementCampaignId", "advertisementTitle", "advertisementContent", "advertisementMediaType", "advertisementMediaUrl", "advertisementTargetServiceType") VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-                [campaignId, adTitle, adContent, mediaType, mediaUrl, targetServiceType]
+                'INSERT INTO "Advertisements" ("adCampaignId", "advertisementTitle", "advertisementContent", "advertisementMediaType", "advertisementMediaUrl") VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                [campaignId, adTitle, adContent, mediaType, mediaUrl]
             );
             res.status(201).json({ success: true, data: result.rows[0] });
         } catch (error) {
@@ -43,11 +46,11 @@ const advertisementController = {
             const { campaignId } = req.params;
             const result = await pool.query(`
                 SELECT a."advertisementId", a."advertisementTitle", 
-                       SUM(an."adAnalyticsImpressions") as total_impressions, 
-                       SUM(an."adAnalyticsClicks") as total_clicks
+                       COALESCE(SUM(an."adAnalyticsImpressions"), 0) as total_impressions, 
+                       COALESCE(SUM(an."adAnalyticsClicks"), 0) as total_clicks
                 FROM "Advertisements" a
-                LEFT JOIN "AdAnalytics" an ON a."advertisementId" = an."adAnalyticsAdvertisementId"
-                WHERE a."advertisementCampaignId" = $1
+                LEFT JOIN "AdAnalytics" an ON a."advertisementId" = an."advertisementId"
+                WHERE a."adCampaignId" = $1
                 GROUP BY a."advertisementId", a."advertisementTitle"
             `, [campaignId]);
             res.json({ success: true, data: result.rows });
@@ -59,7 +62,7 @@ const advertisementController = {
     pauseCampaign: async (req, res) => {
         try {
             const { campaignId } = req.params;
-            await pool.query("UPDATE \"AdCampaigns\" SET \"adCampaignStatus\" = 'Paused' WHERE \"adCampaignId\" = $1 AND \"advertiserId\" = $2", [campaignId, req.user.advertiserId]);
+            await pool.query("UPDATE \"AdCampaigns\" SET \"adCampaignStatusId\" = (SELECT \"adCampaignStatusId\" FROM \"AdCampaignStatuses\" WHERE \"adCampaignStatusName\" = 'Paused') WHERE \"adCampaignId\" = $1 AND \"advertiserId\" = $2", [campaignId, req.user.advertiserId]);
             res.json({ success: true, message: 'Campaign paused' });
         } catch (error) {
             res.status(400).json({ error: error.message });
@@ -69,7 +72,7 @@ const advertisementController = {
     resumeCampaign: async (req, res) => {
         try {
             const { campaignId } = req.params;
-            await pool.query("UPDATE \"AdCampaigns\" SET \"adCampaignStatus\" = 'Active' WHERE \"adCampaignId\" = $1 AND \"advertiserId\" = $2", [campaignId, req.user.advertiserId]);
+            await pool.query("UPDATE \"AdCampaigns\" SET \"adCampaignStatusId\" = (SELECT \"adCampaignStatusId\" FROM \"AdCampaignStatuses\" WHERE \"adCampaignStatusName\" = 'Active') WHERE \"adCampaignId\" = $1 AND \"advertiserId\" = $2", [campaignId, req.user.advertiserId]);
             res.json({ success: true, message: 'Campaign resumed' });
         } catch (error) {
             res.status(400).json({ error: error.message });
@@ -95,7 +98,7 @@ const advertisementController = {
             const result = await pool.query(`
                 SELECT a.*, ac."adCampaignName", ad."advertiserBusinessName"
                 FROM "Advertisements" a
-                JOIN "AdCampaigns" ac ON a."advertisementCampaignId" = ac."adCampaignId"
+                JOIN "AdCampaigns" ac ON a."adCampaignId" = ac."adCampaignId"
                 JOIN "Advertisers" ad ON ac."advertiserId" = ad."advertiserId"
                 ORDER BY a."advertisementCreatedAt" DESC
             `);
@@ -108,7 +111,7 @@ const advertisementController = {
     approveAdvertisement: async (req, res) => {
         try {
             const { adId } = req.params;
-            await pool.query('UPDATE "Advertisements" SET "advertisementIsApproved" = true, "advertisementApprovedAt" = CURRENT_TIMESTAMP, "advertisementApprovedByUserId" = $1 WHERE "advertisementId" = $2', [req.user.userId, adId]);
+            await pool.query('UPDATE "Advertisements" SET "advertisementIsApproved" = true, "advertisementApprovedAt" = CURRENT_TIMESTAMP, "advertisementApprovedBy" = $1 WHERE "advertisementId" = $2', [req.user.managerId, adId]);
             res.json({ success: true, message: 'Advertisement approved' });
         } catch (error) {
             res.status(400).json({ error: error.message });
@@ -160,9 +163,9 @@ const advertisementController = {
         try {
             const { adId } = req.params;
             await pool.query(`
-                INSERT INTO "AdAnalytics" ("adAnalyticsAdvertisementId", "adAnalyticsDate", "adAnalyticsImpressions")
+                INSERT INTO "AdAnalytics" ("advertisementId", "adAnalyticsDate", "adAnalyticsImpressions")
                 VALUES ($1, CURRENT_DATE, 1)
-                ON CONFLICT ("adAnalyticsAdvertisementId", "adAnalyticsDate")
+                ON CONFLICT ("advertisementId", "adAnalyticsDate")
                 DO UPDATE SET "adAnalyticsImpressions" = "AdAnalytics"."adAnalyticsImpressions" + 1
             `, [adId]);
             res.json({ success: true });
@@ -175,9 +178,9 @@ const advertisementController = {
         try {
             const { adId } = req.params;
             await pool.query(`
-                INSERT INTO "AdAnalytics" ("adAnalyticsAdvertisementId", "adAnalyticsDate", "adAnalyticsClicks")
+                INSERT INTO "AdAnalytics" ("advertisementId", "adAnalyticsDate", "adAnalyticsClicks")
                 VALUES ($1, CURRENT_DATE, 1)
-                ON CONFLICT ("adAnalyticsAdvertisementId", "adAnalyticsDate")
+                ON CONFLICT ("advertisementId", "adAnalyticsDate")
                 DO UPDATE SET "adAnalyticsClicks" = "AdAnalytics"."adAnalyticsClicks" + 1
             `, [adId]);
             res.json({ success: true });
