@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import '../styles/MyBookings.css'; // Reuse styles for consistency
 
 function MyVehicles() {
+    const navigate = useNavigate();
     const [vehicles, setVehicles] = useState([]);
     const [brands, setBrands] = useState([]);
     const [models, setModels] = useState([]);
@@ -20,51 +22,68 @@ function MyVehicles() {
         mileage: ''
     });
 
+
     const fetchInitialData = async () => {
         try {
             setLoading(true);
-            const [vehiclesRes, brandsRes, bodyTypesRes] = await Promise.all([
-                api.vehicles.getMyVehicles(),
+            console.log('Fetching vehicle data...');
+            
+            // Fetch public data (brands, body types) - models will be fetched on brand selection
+            const [brandsRes, bodyTypesRes] = await Promise.all([
                 api.vehicles.getBrands(),
                 api.vehicles.getBodyTypes()
             ]);
 
-            setVehicles(vehiclesRes.data.data);
+            console.log('Brands:', brandsRes.data.data);
+            console.log('Body Types:', bodyTypesRes.data.data);
+
             setBrands(brandsRes.data.data);
             setBodyTypes(bodyTypesRes.data.data);
+
+            // Fetch user's vehicles separately (requires auth)
+            try {
+                const vehiclesRes = await api.vehicles.getMyVehicles();
+                console.log('My Vehicles:', vehiclesRes.data.data);
+                setVehicles(vehiclesRes.data.data);
+            } catch (vehicleError) {
+                console.error("Failed to fetch user vehicles:", vehicleError);
+                console.error("Vehicle error details:", vehicleError.response?.data || vehicleError.message);
+                setVehicles([]);
+            }
         } catch (error) {
             console.error("Failed to fetch vehicle data:", error);
+            console.error("Error details:", error.response?.data || error.message);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchInitialData();
-    }, []);
-
-    useEffect(() => {
-        if (newVehicle.brandId) {
-            const fetchModels = async () => {
-                try {
-                    const response = await api.vehicles.getModelsByBrand(newVehicle.brandId);
-                    setModels(response.data.data);
-                } catch (error) {
-                    console.error("Failed to fetch models:", error);
-                }
-            };
-            fetchModels();
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user && (user.role === 'Manager' || user.role === 'Admin')) {
+            navigate('/admin');
         } else {
-            setModels([]);
+            fetchInitialData();
         }
-    }, [newVehicle.brandId]);
+    }, [navigate]);
 
-    const handleInputChange = (e) => {
+    const handleInputChange = async (e) => {
         const { name, value } = e.target;
         setNewVehicle(prev => ({
             ...prev,
             [name]: value
         }));
+
+        // Fetch models when brand changes
+        if (name === 'brandId' && value) {
+            try {
+                const response = await api.vehicles.getModelsByBrand(value);
+                setModels(response.data.data);
+            } catch (error) {
+                console.error("Failed to fetch models for brand:", error);
+                setModels([]);
+            }
+        }
     };
 
     const handleAddVehicle = async (e) => {
@@ -128,17 +147,17 @@ function MyVehicles() {
                                 <select name="brandId" value={newVehicle.brandId} onChange={handleInputChange} required className="form-input">
                                     <option value="">Select Brand</option>
                                     {brands.map(b => (
-                                        <option key={b.vehicle_brand_id} value={b.vehicle_brand_id}>{b.vehicle_brand_name}</option>
+                                        <option key={b.vehicleBrandId} value={b.vehicleBrandId}>{b.vehicleBrandName}</option>
                                     ))}
                                 </select>
                             </div>
 
                             <div className="form-group">
                                 <label>Model *</label>
-                                <select name="modelId" value={newVehicle.modelId} onChange={handleInputChange} required className="form-input" disabled={!newVehicle.brandId}>
+                                <select name="modelId" value={newVehicle.modelId} onChange={handleInputChange} required className="form-input">
                                     <option value="">Select Model</option>
                                     {models.map(m => (
-                                        <option key={m.vehicle_model_id} value={m.vehicle_model_id}>{m.vehicle_model_name}</option>
+                                        <option key={m.vehicleModelId} value={m.vehicleModelId}>{m.vehicleModelName}</option>
                                     ))}
                                 </select>
                             </div>
@@ -148,7 +167,7 @@ function MyVehicles() {
                                 <select name="bodyTypeId" value={newVehicle.bodyTypeId} onChange={handleInputChange} required className="form-input">
                                     <option value="">Select Body Type</option>
                                     {bodyTypes.map(bt => (
-                                        <option key={bt.vehicle_body_type_id} value={bt.vehicle_body_type_id}>{bt.vehicle_body_type_name}</option>
+                                        <option key={bt.vehicleBodyTypeId} value={bt.vehicleBodyTypeId}>{bt.vehicleBodyTypeName}</option>
                                     ))}
                                 </select>
                             </div>
@@ -178,27 +197,27 @@ function MyVehicles() {
                 {vehicles.length > 0 ? (
                     <div className="bookings-grid">
                         {vehicles.map(vehicle => (
-                            <div key={vehicle.vehicle_id} className="booking-card glass-panel">
+                            <div key={vehicle.vehicleId} className="booking-card glass-panel">
                                 <div className="booking-header">
-                                    <span className="booking-id">{vehicle.registration_number}</span>
-                                    <span className="status-badge status-confirmed">{vehicle.vehicle_brand_name}</span>
+                                    <span className="booking-id">{vehicle.vehicleRegistrationNumber}</span>
+                                    <span className="status-badge status-confirmed">{vehicle.vehicleBrandName}</span>
                                 </div>
                                 <div className="booking-details">
                                     <div className="detail-row">
                                         <span className="label">Model:</span>
-                                        <span className="value">{vehicle.vehicle_model_name}</span>
+                                        <span className="value">{vehicle.vehicleModelName}</span>
                                     </div>
                                     <div className="detail-row">
                                         <span className="label">Year:</span>
-                                        <span className="value">{vehicle.manufacture_year}</span>
+                                        <span className="value">{vehicle.vehicleManufactureYear}</span>
                                     </div>
                                     <div className="detail-row">
                                         <span className="label">Color:</span>
-                                        <span className="value">{vehicle.color || 'N/A'}</span>
+                                        <span className="value">{vehicle.vehicleColor || 'N/A'}</span>
                                     </div>
                                     <div className="detail-row">
                                         <span className="label">Mileage:</span>
-                                        <span className="value">{vehicle.mileage ? `${vehicle.mileage} km` : 'N/A'}</span>
+                                        <span className="value">{vehicle.vehicleMileage ? `${vehicle.vehicleMileage} km` : 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>

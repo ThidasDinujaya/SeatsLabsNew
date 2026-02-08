@@ -15,14 +15,14 @@ const serviceController = {
 
             if (categoryId) {
                 params.push(categoryId);
-                query += ` AND s.serviceCategoryId = $${params.length}`;
+                query += ` AND s."serviceCategoryId" = $${params.length}`;
             }
 
             if (available === 'true') {
-                query += ' AND s.serviceIsAvailable = true';
+                query += ' AND s."serviceIsActive" = true';
             }
 
-            query += ' ORDER BY s.serviceName';
+            query += ' ORDER BY s."serviceName"';
 
             const result = await pool.query(query, params);
 

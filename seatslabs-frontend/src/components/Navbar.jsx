@@ -57,15 +57,17 @@ function Navbar({ user, onLogout }) {
               Services
             </Link>
           </li>
-          <li>
-            <Link
-              to="/booking"
-              className={`navbar-link ${isActive('/booking') ? 'active' : ''}`}
-              onClick={closeMenu}
-            >
-              Book Now
-            </Link>
-          </li>
+          {(!user || (user.role !== 'Manager' && user.role !== 'Admin')) && (
+            <li>
+              <Link
+                to="/booking"
+                className={`navbar-link ${isActive('/booking') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                Book Now
+              </Link>
+            </li>
+          )}
           {user && (user.role === 'Manager' || user.role === 'Admin') && (
             <li>
               <Link

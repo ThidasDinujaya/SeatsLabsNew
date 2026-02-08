@@ -44,13 +44,17 @@ const bookingController = {
 
             // Create booking
             const scheduledDateTime = new Date(
-                `${slot.timeSlotDate}T${slot.timeSlotStartTime}`
+                `${slot.timeSlotDate.toISOString().split('T')[0]}T${slot.timeSlotStartTime}`
             );
+
+            // Resolve 'Pending' status ID
+            const statusResult = await client.query('SELECT "bookingStatusId" FROM "BookingStatuses" WHERE "bookingStatusName" = \'Pending\'');
+            const pendingStatusId = statusResult.rows[0].bookingStatusId;
 
             const bookingResult = await client.query(
                 `INSERT INTO "Bookings" 
         ("customerId", "vehicleId", "serviceId", "timeSlotId", "bookingReference", 
-         "bookingScheduledDateTime", "bookingStatus", "bookingSpecialNotes", "bookingEstimatedPrice")
+         "bookingScheduledDateTime", "bookingStatusId", "bookingSpecialNotes", "bookingEstimatedPrice")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *`,
                 [
@@ -60,7 +64,7 @@ const bookingController = {
                     timeSlotId,
                     bookingReference,
                     scheduledDateTime,
-                    'Pending',
+                    pendingStatusId,
                     specialNotes,
                     service.serviceBasePrice
                 ]
@@ -74,11 +78,11 @@ const bookingController = {
                 [timeSlotId]
             );
 
-            // Create initial status
+            // Create initial status history
             await client.query(
-                `INSERT INTO "BookingStatuses" ("bookingId", "bookingStatusStatus", "bookingStatusNotes", "bookingStatusUpdatedByUserId")
+                `INSERT INTO "BookingStatusHistory" ("bookingId", "bookingStatusId", "userId", "bookingStatusHistoryNotes")
          VALUES ($1, $2, $3, $4)`,
-                [booking.bookingId, 'Pending', 'Booking created', req.user.userId]
+                [booking.bookingId, pendingStatusId, req.user.userId, 'Booking created']
             );
 
             await client.query('COMMIT');
@@ -106,8 +110,9 @@ const bookingController = {
         SELECT b.*, s."serviceName", s."serviceDurationMinutes",
                v."vehicleRegistrationNumber", v."vehicleManufactureYear",
                vb."vehicleBrandName", vm."vehicleModelName",
-               ts.timeSlotSlotDate, ts."timeSlotStartTime", ts."timeSlotEndTime",
-               t."userId" as tech_userId, 
+               ts."timeSlotDate", ts."timeSlotStartTime", ts."timeSlotEndTime",
+               bs."bookingStatusName", bs."bookingStatusColor",
+               t."technicianId", 
                u."userFirstName" as tech_first_name,
                u."userLastName" as tech_last_name
         FROM "Bookings" b
@@ -116,6 +121,7 @@ const bookingController = {
         JOIN "VehicleBrands" vb ON v."vehicleBrandId" = vb."vehicleBrandId"
         JOIN "VehicleModels" vm ON v."vehicleModelId" = vm."vehicleModelId"
         JOIN "TimeSlots" ts ON b."timeSlotId" = ts."timeSlotId"
+        JOIN "BookingStatuses" bs ON b."bookingStatusId" = bs."bookingStatusId"
         LEFT JOIN "Technicians" t ON b."technicianId" = t."technicianId"
         LEFT JOIN "Users" u ON t."userId" = u."userId"
         WHERE b."customerId" = $1
@@ -124,11 +130,11 @@ const bookingController = {
             const params = [customerId];
 
             if (status) {
-                query += ' AND b.bookingStatus = $2';
+                query += ' AND bs."bookingStatusName" = $2';
                 params.push(status);
             }
 
-            query += ' ORDER BY b.bookingScheduledDateTime DESC LIMIT $' +
+            query += ' ORDER BY b."bookingScheduledDateTime" DESC LIMIT $' +
                 (params.length + 1) + ' OFFSET $' + (params.length + 2);
             params.push(limit, offset);
 
@@ -153,17 +159,22 @@ const bookingController = {
             const { bookingId } = req.params;
             const { status, bookingStatusNotes } = req.body;
 
+            // Resolve status ID
+            const statusResult = await client.query('SELECT "bookingStatusId" FROM "BookingStatuses" WHERE "bookingStatusName" = $1', [status]);
+            if (statusResult.rows.length === 0) throw new Error('Invalid status name');
+            const statusId = statusResult.rows[0].bookingStatusId;
+
             // Update booking status
             await client.query(
-                'UPDATE "Bookings" SET "bookingStatus" = $1, "bookingUpdatedAt" = CURRENT_TIMESTAMP WHERE "bookingId" = $2',
-                [status, bookingId]
+                'UPDATE "Bookings" SET "bookingStatusId" = $1, "bookingUpdatedAt" = CURRENT_TIMESTAMP WHERE "bookingId" = $2',
+                [statusId, bookingId]
             );
 
             // Add status history
             await client.query(
-                `INSERT INTO "BookingStatuses" ("bookingId", "bookingStatusStatus", "bookingStatusNotes", "bookingStatusUpdatedByUserId")
+                `INSERT INTO "BookingStatusHistory" ("bookingId", "bookingStatusId", "userId", "bookingStatusHistoryNotes")
          VALUES ($1, $2, $3, $4)`,
-                [bookingId, status, bookingStatusNotes, req.user.userId]
+                [bookingId, statusId, req.user.userId, bookingStatusNotes]
             );
 
             // If status is "In Progress", set actual start time
@@ -228,19 +239,36 @@ const bookingController = {
 
     // Cancel booking
     cancelBooking: async (req, res) => {
+        const client = await pool.connect();
         try {
+            await client.query('BEGIN');
             const { bookingId } = req.params;
             const customerId = req.user.customerId;
 
-            await pool.query(
-                `UPDATE "Bookings" SET "bookingStatus" = 'Cancelled', "bookingUpdatedAt" = CURRENT_TIMESTAMP 
-                 WHERE "bookingId" = $1 AND "customerId" = $2`,
-                [bookingId, customerId]
+            // Resolve 'Cancelled' status ID
+            const statusResult = await client.query('SELECT "bookingStatusId" FROM "BookingStatuses" WHERE "bookingStatusName" = \'Cancelled\'');
+            const cancelledStatusId = statusResult.rows[0].bookingStatusId;
+
+            await client.query(
+                `UPDATE "Bookings" SET "bookingStatusId" = $1, "bookingUpdatedAt" = CURRENT_TIMESTAMP 
+                 WHERE "bookingId" = $2 AND "customerId" = $3`,
+                [cancelledStatusId, bookingId, customerId]
             );
 
+            // Add to history
+            await client.query(
+                `INSERT INTO "BookingStatusHistory" ("bookingId", "bookingStatusId", "userId", "bookingStatusHistoryNotes")
+                 VALUES ($1, $2, $3, $4)`,
+                [bookingId, cancelledStatusId, req.user.userId, 'Cancelled by customer']
+            );
+
+            await client.query('COMMIT');
             res.json({ success: true, message: 'Booking cancelled successfully' });
         } catch (error) {
+            await client.query('ROLLBACK');
             res.status(400).json({ error: error.message });
+        } finally {
+            client.release();
         }
     },
 
@@ -303,29 +331,63 @@ const bookingController = {
 
     // Approve booking
     approveBooking: async (req, res) => {
+        const client = await pool.connect();
         try {
+            await client.query('BEGIN');
             const { bookingId } = req.params;
-            await pool.query(
-                "UPDATE Bookings SET bookingStatus = 'Approved', bookingUpdatedAt = CURRENT_TIMESTAMP WHERE bookingId = $1",
-                [bookingId]
+
+            const statusResult = await client.query('SELECT "bookingStatusId" FROM "BookingStatuses" WHERE "bookingStatusName" = \'Approved\'');
+            const approvedStatusId = statusResult.rows[0].bookingStatusId;
+
+            await client.query(
+                `UPDATE "Bookings" SET "bookingStatusId" = $1, "bookingUpdatedAt" = CURRENT_TIMESTAMP WHERE "bookingId" = $2`,
+                [approvedStatusId, bookingId]
             );
+
+            await client.query(
+                `INSERT INTO "BookingStatusHistory" ("bookingId", "bookingStatusId", "userId", "bookingStatusHistoryNotes")
+                 VALUES ($1, $2, $3, $4)`,
+                [bookingId, approvedStatusId, req.user.userId, 'Approved by manager']
+            );
+
+            await client.query('COMMIT');
             res.json({ success: true, message: 'Booking approved' });
         } catch (error) {
+            await client.query('ROLLBACK');
             res.status(400).json({ error: error.message });
+        } finally {
+            client.release();
         }
     },
 
     // Reject booking
     rejectBooking: async (req, res) => {
+        const client = await pool.connect();
         try {
+            await client.query('BEGIN');
             const { bookingId } = req.params;
-            await pool.query(
-                "UPDATE Bookings SET bookingStatus = 'Rejected', bookingUpdatedAt = CURRENT_TIMESTAMP WHERE bookingId = $1",
-                [bookingId]
+
+            const statusResult = await client.query('SELECT "bookingStatusId" FROM "BookingStatuses" WHERE "bookingStatusName" = \'Rejected\'');
+            const rejectedStatusId = statusResult.rows[0].bookingStatusId;
+
+            await client.query(
+                `UPDATE "Bookings" SET "bookingStatusId" = $1, "bookingUpdatedAt" = CURRENT_TIMESTAMP WHERE "bookingId" = $2`,
+                [rejectedStatusId, bookingId]
             );
+
+            await client.query(
+                `INSERT INTO "BookingStatusHistory" ("bookingId", "bookingStatusId", "userId", "bookingStatusHistoryNotes")
+                 VALUES ($1, $2, $3, $4)`,
+                [bookingId, rejectedStatusId, req.user.userId, 'Rejected by manager']
+            );
+
+            await client.query('COMMIT');
             res.json({ success: true, message: 'Booking rejected' });
         } catch (error) {
+            await client.query('ROLLBACK');
             res.status(400).json({ error: error.message });
+        } finally {
+            client.release();
         }
     },
 
@@ -364,7 +426,7 @@ const bookingController = {
             const { date } = req.query;
             const result = await pool.query(
                 `SELECT * FROM "TimeSlots" 
-                 WHERE "timeSlotDate" = $1 
+                 WHERE DATE("timeSlotDate") = DATE($1) 
                  AND "timeSlotIsAvailable" = true 
                  AND "timeSlotCurrentBookings" < "timeSlotMaxCapacity"
                  ORDER BY "timeSlotStartTime"`,

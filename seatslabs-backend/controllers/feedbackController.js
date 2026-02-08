@@ -3,10 +3,10 @@ const pool = require('../config/database');
 const feedbackController = {
     submitFeedback: async (req, res) => {
         try {
-            const { bookingId, technicianId, serviceRating, technicianRating, feedbackComments } = req.body;
+            const { bookingId, serviceRating, feedbackComments } = req.body;
             const result = await pool.query(
-                'INSERT INTO "Feedbacks" ("feedbackBookingId", "feedbackCustomerId", "feedbackTechnicianId", "feedbackServiceRating", "feedbackTechnicianRating", "feedbackComments") VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-                [bookingId, req.user.customerId, technicianId, serviceRating, technicianRating, feedbackComments]
+                'INSERT INTO "Feedbacks" ("bookingId", "userId", "feedbackRating", "feedbackComment") VALUES ($1, $2, $3, $4) RETURNING *',
+                [bookingId, req.user.userId, serviceRating, feedbackComments]
             );
             res.status(201).json({ success: true, data: result.rows[0] });
         } catch (error) {
@@ -16,7 +16,7 @@ const feedbackController = {
 
     getCustomerFeedback: async (req, res) => {
         try {
-            const result = await pool.query('SELECT * FROM "Feedbacks" WHERE "feedbackCustomerId" = $1', [req.user.customerId]);
+            const result = await pool.query('SELECT * FROM "Feedbacks" WHERE "userId" = $1', [req.user.userId]);
             res.json({ success: true, data: result.rows });
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -35,7 +35,7 @@ const feedbackController = {
     getFeedbackByService: async (req, res) => {
         try {
             const { serviceId } = req.params;
-            const result = await pool.query('SELECT f.* FROM "Feedbacks" f JOIN "Bookings" b ON f."feedbackBookingId" = b."bookingId" WHERE b."bookingServiceId" = $1', [serviceId]);
+            const result = await pool.query('SELECT f.* FROM "Feedbacks" f JOIN "Bookings" b ON f."bookingId" = b."bookingId" WHERE b."serviceId" = $1', [serviceId]);
             res.json({ success: true, data: result.rows });
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -45,7 +45,7 @@ const feedbackController = {
     getFeedbackByTechnician: async (req, res) => {
         try {
             const { technicianId } = req.params;
-            const result = await pool.query('SELECT * FROM "Feedbacks" WHERE "feedbackTechnicianId" = $1', [technicianId]);
+            const result = await pool.query('SELECT f.* FROM "Feedbacks" f JOIN "Bookings" b ON f."bookingId" = b."bookingId" WHERE b."technicianId" = $1', [technicianId]);
             res.json({ success: true, data: result.rows });
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -54,10 +54,11 @@ const feedbackController = {
 
     submitComplaint: async (req, res) => {
         try {
-            const { bookingId, complaintType, feedbackDescription } = req.body;
+            const { bookingId, complaintTitle, feedbackDescription } = req.body;
             const result = await pool.query(
-                'INSERT INTO "Complaints" ("complaintBookingId", "complaintCustomerId", "complaintType", "complaintDescription") VALUES ($1, $2, $3, $4) RETURNING *',
-                [bookingId, req.user.customerId, complaintType, feedbackDescription]
+                `INSERT INTO "Complaints" ("bookingId", "userId", "complaintStatusId", "complaintTitle", "complaintDescription") 
+                 VALUES ($1, $2, (SELECT "complaintStatusId" FROM "ComplaintStatuses" WHERE "complaintStatusName" = 'New'), $3, $4) RETURNING *`,
+                [bookingId, req.user.userId, complaintTitle, feedbackDescription]
             );
             res.status(201).json({ success: true, data: result.rows[0] });
         } catch (error) {
@@ -77,10 +78,10 @@ const feedbackController = {
     resolveComplaint: async (req, res) => {
         try {
             const { complaintId } = req.params;
-            const { complaintResolution } = req.body;
+            const { complaintAdminNotes } = req.body;
             await pool.query(
-                "UPDATE \"Complaints\" SET \"complaintResolution\" = $1, \"complaintStatus\" = 'Resolved', \"complaintResolvedByUserId\" = $2, \"complaintResolvedAt\" = CURRENT_TIMESTAMP WHERE \"complaintId\" = $3",
-                [complaintResolution, req.user.userId, complaintId]
+                "UPDATE \"Complaints\" SET \"complaintAdminNotes\" = $1, \"complaintStatusId\" = (SELECT \"complaintStatusId\" FROM \"ComplaintStatuses\" WHERE \"complaintStatusName\" = 'Resolved'), \"complaintResolvedBy\" = $2 WHERE \"complaintId\" = $3",
+                [complaintAdminNotes, req.user.managerId, complaintId]
             );
             res.json({ success: true, message: 'Complaint resolved' });
         } catch (error) {

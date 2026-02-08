@@ -6,11 +6,12 @@ const paymentController = {
             const { bookingId } = req.params;
             const { amount, paymentMethodId, transactionId } = req.body;
             const result = await pool.query(
-                "INSERT INTO \"Payments\" (\"paymentBookingId\", \"paymentPaymentMethodId\", \"paymentAmount\", \"paymentStatus\", \"paymentTransactionId\") VALUES ($1, $2, $3, 'Completed', $4) RETURNING *",
+                `INSERT INTO "Payments" ("bookingId", "paymentMethodId", "paymentAmount", "paymentStatusId", "paymentTransactionId") 
+                 VALUES ($1, $2, $3, (SELECT "paymentStatusId" FROM "PaymentStatuses" WHERE "paymentStatusName" = 'Completed'), $4) RETURNING *`,
                 [bookingId, paymentMethodId, amount, transactionId]
             );
             // Update booking status
-            await pool.query('UPDATE "Bookings" SET "bookingStatus" = \'Paid\' WHERE "bookingId" = $1', [bookingId]);
+            await pool.query('UPDATE "Bookings" SET "bookingStatusId" = (SELECT "bookingStatusId" FROM "BookingStatuses" WHERE "bookingStatusName" = \'Approved\') WHERE "bookingId" = $1', [bookingId]);
             res.status(201).json({ success: true, data: result.rows[0] });
         } catch (error) {
             res.status(400).json({ error: error.message });
@@ -19,7 +20,7 @@ const paymentController = {
 
     getCustomerPayments: async (req, res) => {
         try {
-            const result = await pool.query('SELECT p.* FROM "Payments" p JOIN "Bookings" b ON p."paymentBookingId" = b."bookingId" WHERE b."bookingCustomerId" = $1', [req.user.customerId]);
+            const result = await pool.query('SELECT p.* FROM "Payments" p JOIN "Bookings" b ON p."bookingId" = b."bookingId" WHERE b."customerId" = $1', [req.user.customerId]);
             res.json({ success: true, data: result.rows });
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -31,11 +32,11 @@ const paymentController = {
             const { campaignId } = req.params;
             const { amount, paymentMethodId, transactionId } = req.body;
             const result = await pool.query(
-                "INSERT INTO \"AdPayments\" (\"adPaymentCampaignId\", \"adPaymentAmount\", \"adPaymentStatus\", \"adPaymentTransactionId\") VALUES ($1, $2, 'Completed', $3) RETURNING *",
+                "INSERT INTO \"AdPayments\" (\"adCampaignId\", \"adPaymentAmount\", \"adPaymentStatus\", \"adPaymentTransactionId\", \"adPaymentDateTime\") VALUES ($1, $2, 'Completed', $3, CURRENT_TIMESTAMP) RETURNING *",
                 [campaignId, amount, transactionId]
             );
             // Update campaign status
-            await pool.query('UPDATE "AdCampaigns" SET "adCampaignStatus" = \'Active\' WHERE "adCampaignId" = $1', [campaignId]);
+            await pool.query('UPDATE "AdCampaigns" SET "adCampaignStatusId" = (SELECT "adCampaignStatusId" FROM "AdCampaignStatuses" WHERE "adCampaignStatusName" = \'Active\') WHERE "adCampaignId" = $1', [campaignId]);
             res.status(201).json({ success: true, data: result.rows[0] });
         } catch (error) {
             res.status(400).json({ error: error.message });
@@ -47,7 +48,7 @@ const paymentController = {
             const result = await pool.query(`
                 SELECT ap.*, ac."adCampaignName" 
                 FROM "AdPayments" ap 
-                JOIN "AdCampaigns" ac ON ap."adPaymentCampaignId" = ac."adCampaignId" 
+                JOIN "AdCampaigns" ac ON ap."adCampaignId" = ac."adCampaignId" 
                 WHERE ac."advertiserId" = $1
             `, [req.user.advertiserId]);
             res.json({ success: true, data: result.rows });
@@ -62,9 +63,9 @@ const paymentController = {
                 SELECT p.*, b."bookingReference",
                        u."userFirstName", u."userLastName"
                 FROM "Payments" p 
-                JOIN "Bookings" b ON p."paymentBookingId" = b."bookingId"
-                JOIN "Customers" c ON b."bookingCustomerId" = c."customerId"
-                JOIN "Users" u ON c."customerUserId" = u."userId"
+                JOIN "Bookings" b ON p."bookingId" = b."bookingId"
+                JOIN "Customers" c ON b."customerId" = c."customerId"
+                JOIN "Users" u ON c."userId" = u."userId"
                 ORDER BY p."paymentDateTime" DESC
             `);
             res.json({ success: true, data: result.rows });
@@ -95,7 +96,7 @@ const paymentController = {
     verifyPayment: async (req, res) => {
         try {
             const { paymentId } = req.params;
-            await pool.query('UPDATE "Payments" SET "paymentStatus" = \'Verified\' WHERE "paymentId" = $1', [paymentId]);
+            await pool.query('UPDATE "Payments" SET "paymentStatusId" = (SELECT "paymentStatusId" FROM "PaymentStatuses" WHERE "paymentStatusName" = \'Completed\') WHERE "paymentId" = $1', [paymentId]);
             res.json({ success: true, message: 'Payment verified' });
         } catch (error) {
             res.status(400).json({ error: error.message });
@@ -105,7 +106,7 @@ const paymentController = {
     processRefund: async (req, res) => {
         try {
             const { paymentId } = req.params;
-            await pool.query('UPDATE "Payments" SET "paymentStatus" = \'Refunded\' WHERE "paymentId" = $1', [paymentId]);
+            await pool.query('UPDATE "Payments" SET "paymentStatusId" = (SELECT "paymentStatusId" FROM "PaymentStatuses" WHERE "paymentStatusName" = \'Refunded\') WHERE "paymentId" = $1', [paymentId]);
             res.json({ success: true, message: 'Refund processed' });
         } catch (error) {
             res.status(400).json({ error: error.message });
