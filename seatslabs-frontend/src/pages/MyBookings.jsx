@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import '../styles/MyBookings.css';
 
 function MyBookings({ currentUser }) {
+    const navigate = useNavigate();
     const [myBookings, setMyBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -27,10 +28,15 @@ function MyBookings({ currentUser }) {
     };
 
     useEffect(() => {
+        if (currentUser && (currentUser.role === 'Manager' || currentUser.role === 'Admin')) {
+            navigate('/admin');
+            return;
+        }
+
         if (currentUser) {
             fetchMyBookings();
         }
-    }, [currentUser]);
+    }, [currentUser, navigate]);
 
     const getStatusClass = (status) => {
         const statusClasses = {

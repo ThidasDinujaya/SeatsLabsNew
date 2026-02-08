@@ -5,7 +5,19 @@ import '../styles/ServiceCard.css';
 function ServiceCard({ service, showButton = true }) {
   const navigate = useNavigate();
 
+  const calculateIsManager = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      return user && (user.role === 'Manager' || user.role === 'Admin');
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const isManager = calculateIsManager();
+
   const handleSelect = () => {
+    if (isManager) return; 
     navigate('/booking', { state: { selectedService: service } });
   };
 
@@ -24,7 +36,7 @@ function ServiceCard({ service, showButton = true }) {
           <span className="price-value">Rs. {service.price.toLocaleString()}</span>
         </div>
         
-        {showButton && (
+        {showButton && !isManager && (
           <button className="select-btn" onClick={handleSelect}>
             Select
           </button>

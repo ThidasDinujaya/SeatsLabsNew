@@ -60,6 +60,38 @@ INSERT INTO "VehicleBrands" ("vehicleBrandName", "vehicleBrandCountry") VALUES
 ('BMW', 'Germany'),
 ('Mercedes-Benz', 'Germany');
 
+-- Insert Vehicle Models
+INSERT INTO "VehicleModels" ("vehicleBrandId", "vehicleModelName", "vehicleModelYearIntroduced") VALUES
+-- Toyota Models
+(1, 'Corolla', 1966),
+(1, 'Camry', 1982),
+(1, 'RAV4', 1994),
+(1, 'Prius', 1997),
+(1, 'Hilux', 1968),
+(1, 'Land Cruiser', 1951),
+-- Honda Models
+(2, 'Civic', 1972),
+(2, 'Accord', 1976),
+(2, 'CR-V', 1995),
+(2, 'City', 1981),
+(2, 'Fit', 2001),
+-- Nissan Models
+(3, 'Altima', 1992),
+(3, 'Sentra', 1982),
+(3, 'Rogue', 2007),
+(3, 'Pathfinder', 1985),
+(3, 'Leaf', 2010),
+-- BMW Models
+(4, '3 Series', 1975),
+(4, '5 Series', 1972),
+(4, 'X3', 2003),
+(4, 'X5', 1999),
+-- Mercedes-Benz Models
+(5, 'C-Class', 1993),
+(5, 'E-Class', 1953),
+(5, 'GLC', 2015),
+(5, 'S-Class', 1972);
+
 -- Insert Vehicle Body Types
 INSERT INTO "VehicleBodyTypes" ("vehicleBodyTypeName", "vehicleBodyTypeDescription") VALUES
 ('Sedan', '4-door passenger car'),

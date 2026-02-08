@@ -17,10 +17,10 @@ const authenticate = async (req, res, next) => {
                     c."customerId", ad."advertiserId", t."technicianId", m."managerId"
              FROM "Users" u 
              JOIN "UserTypes" ut ON u."userTypeId" = ut."userTypeId" 
-             LEFT JOIN "Customers" c ON u."userId" = c."customerUserId"
-             LEFT JOIN "Advertisers" ad ON u."userId" = ad."advertiserUserId"
-             LEFT JOIN "Technicians" t ON u."userId" = t."technicianUserId"
-             LEFT JOIN "Managers" m ON u."userId" = m."managerUserId"
+             LEFT JOIN "Customers" c ON u."userId" = c."userId"
+             LEFT JOIN "Advertisers" ad ON u."userId" = ad."userId"
+             LEFT JOIN "Technicians" t ON u."userId" = t."userId"
+             LEFT JOIN "Managers" m ON u."userId" = m."userId"
              WHERE u."userId" = $1 AND u."userIsActive" = true`,
             [decoded.userId]
         );

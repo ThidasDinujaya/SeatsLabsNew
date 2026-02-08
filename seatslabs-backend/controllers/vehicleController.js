@@ -87,6 +87,15 @@ const vehicleController = {
         }
     },
 
+    getAllModels: async (req, res) => {
+        try {
+            const result = await pool.query('SELECT * FROM "VehicleModels" ORDER BY "vehicleModelName"');
+            res.json({ success: true, data: result.rows });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    },
+
     getModelsByBrand: async (req, res) => {
         try {
             const { brandId } = req.params;

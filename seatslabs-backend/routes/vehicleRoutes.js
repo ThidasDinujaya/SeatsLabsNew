@@ -142,6 +142,18 @@ router.get('/brands', vehicleController.getAllBrands);
 
 /**
  * @swagger
+ * /vehicles/models:
+ *   get:
+ *     summary: Get all vehicle models
+ *     tags: [Vehicles]
+ *     responses:
+ *       200:
+ *         description: List of all vehicle models
+ */
+router.get('/models', vehicleController.getAllModels);
+
+/**
+ * @swagger
  * /vehicles/brands/{brandId}/models:
  *   get:
  *     summary: Get models by brand ID

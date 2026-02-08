@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import '../styles/MyBookings.css'; // Reuse styles for consistency
 
 function MyVehicles() {
+    const navigate = useNavigate();
     const [vehicles, setVehicles] = useState([]);
     const [brands, setBrands] = useState([]);
     const [models, setModels] = useState([]);
@@ -20,44 +22,53 @@ function MyVehicles() {
         mileage: ''
     });
 
+
     const fetchInitialData = async () => {
         try {
             setLoading(true);
-            const [vehiclesRes, brandsRes, bodyTypesRes] = await Promise.all([
-                api.vehicles.getMyVehicles(),
+            console.log('Fetching vehicle data...');
+            
+            // Fetch public data (brands, models, body types) - these don't require auth
+            const [brandsRes, modelsRes, bodyTypesRes] = await Promise.all([
                 api.vehicles.getBrands(),
+                api.vehicles.getAllModels(),
                 api.vehicles.getBodyTypes()
             ]);
 
-            setVehicles(vehiclesRes.data.data);
+            console.log('Brands:', brandsRes.data.data);
+            console.log('Models:', modelsRes.data.data);
+            console.log('Body Types:', bodyTypesRes.data.data);
+
             setBrands(brandsRes.data.data);
+            setModels(modelsRes.data.data);
             setBodyTypes(bodyTypesRes.data.data);
+
+            // Fetch user's vehicles separately (requires auth)
+            try {
+                const vehiclesRes = await api.vehicles.getMyVehicles();
+                console.log('My Vehicles:', vehiclesRes.data.data);
+                setVehicles(vehiclesRes.data.data);
+            } catch (vehicleError) {
+                console.error("Failed to fetch user vehicles:", vehicleError);
+                console.error("Vehicle error details:", vehicleError.response?.data || vehicleError.message);
+                setVehicles([]);
+            }
         } catch (error) {
             console.error("Failed to fetch vehicle data:", error);
+            console.error("Error details:", error.response?.data || error.message);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchInitialData();
-    }, []);
-
-    useEffect(() => {
-        if (newVehicle.brandId) {
-            const fetchModels = async () => {
-                try {
-                    const response = await api.vehicles.getModelsByBrand(newVehicle.brandId);
-                    setModels(response.data.data);
-                } catch (error) {
-                    console.error("Failed to fetch models:", error);
-                }
-            };
-            fetchModels();
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user && (user.role === 'Manager' || user.role === 'Admin')) {
+            navigate('/admin');
         } else {
-            setModels([]);
+            fetchInitialData();
         }
-    }, [newVehicle.brandId]);
+    }, [navigate]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -135,7 +146,7 @@ function MyVehicles() {
 
                             <div className="form-group">
                                 <label>Model *</label>
-                                <select name="modelId" value={newVehicle.modelId} onChange={handleInputChange} required className="form-input" disabled={!newVehicle.brandId}>
+                                <select name="modelId" value={newVehicle.modelId} onChange={handleInputChange} required className="form-input">
                                     <option value="">Select Model</option>
                                     {models.map(m => (
                                         <option key={m.vehicleModelId} value={m.vehicleModelId}>{m.vehicleModelName}</option>

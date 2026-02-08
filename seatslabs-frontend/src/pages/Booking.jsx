@@ -32,6 +32,13 @@ function Booking({ services }) {
   // Prefill from Logged In User and Load Data
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user'));
+
+    // Redirect Managers/Admins
+    if (user && (user.role === 'Manager' || user.role === 'Admin')) {
+      navigate('/admin');
+      return;
+    }
+
     if (user) {
       setCurrentUser(user);
       setFormData(prev => ({

@@ -18,7 +18,10 @@ function Login({ onLogin }) {
 
         try {
             const response = await api.auth.login(email, password);
-            const user = response.user;
+            const { token, user } = response; // Fix: use response directly, not response.data
+
+            // Store token for subsequent API calls
+            localStorage.setItem('token', token);
 
             // Backend returns: { id, email, firstName, lastName, userType }
             const roleName = user.userType;

@@ -66,6 +66,7 @@ const VehicleService = {
     delete: (id) => api.delete(`/vehicles/${id}`),
     getBrands: () => api.get('/vehicles/brands'),
     createBrand: (data) => api.post('/vehicles/brands', data),
+    getAllModels: () => api.get('/vehicles/models'),
     getModelsByBrand: (brandId) => api.get(`/vehicles/brands/${brandId}/models`),
     createModel: (data) => api.post('/vehicles/models', data),
     getBodyTypes: () => api.get('/vehicles/body-types'),
